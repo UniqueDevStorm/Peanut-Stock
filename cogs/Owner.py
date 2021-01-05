@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from config import OWNERS
 import ast
+from tools.Autocogs import AutoCogsReload
 
 
 def insert_returns(body):
@@ -52,6 +53,22 @@ class Owner(commands.Cog):
             await ctx.send(result)
         except Exception as a:
             await ctx.send(a)
+
+    @commands.command(name="reload", aliases=["리로드", "r"])
+    @is_owner()
+    async def 리로드(self, ctx, c=None):
+        if c == None:
+            try:
+                AutoCogsReload(self.bot)
+                await ctx.send(f"모든 모듈을 리로드했어요.")
+            except Exception as a:
+                await ctx.send(f"리로드에 실패했어요. [{a}]")
+        else:
+            try:
+                self.bot.reload_extension(c)
+                await ctx.send(f"{c} 모듈을 리로드했어요.")
+            except Exception as a:
+                await ctx.send(f"{c} 모듈 리로드에 실패했어요. [{a}]")
 
 
 def setup(bot):
