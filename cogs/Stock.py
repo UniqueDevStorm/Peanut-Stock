@@ -10,6 +10,7 @@ class Stock(commands.Cog):
         self.bot = bot
         self.client = client
         self.mydb = self.client["peanut"]
+        self.user = self.mydb["user"]
         self.mycol = self.mydb["stock"]
 
 
