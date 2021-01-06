@@ -13,6 +13,12 @@ class Economy(commands.Cog):
         self.client = client
         self.coll = coll
 
+    # @commands.command()
+    # async def Check(self, ctx):
+    #     usercoll = self.coll.find_one({"_id": str(ctx.author.id)})
+    #     usercoll["money"] += 1000
+    #     await ctx.send(usercoll)
+
     @commands.command(name="가입")
     async def Register(self, ctx):
         if self.coll.find_one({"_id": str(ctx.author.id)}):
