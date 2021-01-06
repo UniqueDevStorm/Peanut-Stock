@@ -5,7 +5,18 @@ class Eco:
         self.find = {"_id": str(self.id)}
 
     def init(self):
-        data = {"_id": str(self.id), "money": 0}
+        data = {
+            "_id": str(self.id),
+            "money": 0,
+            "뇌제트": 0,
+            "땅콩껍데기": 0,
+            "땅콩와플": 0,
+            "백병원": 0,
+            "스톰전자": 0,
+            "인절미": 0,
+            "존맛토스트": 0,
+            "호두과자": 0,
+        }
         self.coll.insert_one(data)
 
     def delete(self):

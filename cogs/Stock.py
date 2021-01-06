@@ -50,6 +50,31 @@ class Stock(commands.Cog):
             return Status.OK
         return Status.NotFount
 
+    def CheckUserMoney(self, user: str):
+        data = self.user.find_one({"_id": user})
+        return data["money"]
+
+    def CheckCount(self, user: str, Corporation: int, count: int):
+        money = self.CheckUserMoney(user)
+        pay = Corporation * count
+        print(money)
+        if money > pay:
+            return True
+        return False
+
+    def CorporationBuy(self, user: str, minus: int, Corporation: str, count: int):
+        find = {"_id": user}
+        data = self.user.find_one(find)
+        data["money"] -= minus
+        data[Corporation] += count
+        setdata = {"$set": data}
+        self.user.update_one(find, setdata)
+
+    def CheckCorporationCount(self, Corporation: str):
+        find = {"_id": Corporation}
+        data = self.coll.find_one(find)
+        return data["money"]
+
     @tasks.loop(seconds=600)
     async def StockLoop(self):
         for i in self.coll.find():
@@ -78,12 +103,35 @@ class Stock(commands.Cog):
         embed = discord.Embed(title="주식 통계", description=string)
         await ctx.send(embed=embed)
 
+    @commands.command()
+    async def Test(self, ctx, money: int = None):
+        if money == None:
+            money = 10000
+        find = {"_id": str(ctx.author.id)}
+        data = self.user.find_one(find)
+        data["money"] += money
+        setdata = {"$set": data}
+        self.coll.update_one(find, setdata)
+        await ctx.send("10000원 추가함")
+
     @Stock.command(name="구매")
     @CheckUser()
-    async def Buy(self, ctx, Corporation: str):
+    async def Buy(self, ctx, Corporation: str, count: int):
         if self.CheckCorporation(Corporation) is Status.OK:
-            return await ctx.send("정상적인 주식회사입니다.")
-        await ctx.send("정상적이지 않은 주식 회사 입니다.")
+            data = self.coll.find_one({"_id": Corporation})
+            now = data["money"]
+            if self.CheckCount(str(ctx.author.id), now, count):
+                self.CorporationBuy(
+                    str(ctx.author.id),
+                    self.CheckCorporationCount(Corporation),
+                    Corporation,
+                    count,
+                )
+                await ctx.send("구매가 정상적으로 처리 되었습니다! :white_check_mark:")
+            else:
+                await ctx.send("구매 못함 ;;")
+        else:
+            await ctx.send("정상적이지 않은 주식 회사 입니다.")
 
 
 def setup(bot):
