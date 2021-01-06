@@ -14,7 +14,7 @@ class Economy(commands.Cog):
         self.coll = coll
 
     @commands.command(name="가입")
-    async def Resister(self, ctx):
+    async def Register(self, ctx):
         if self.coll.find_one({"_id": str(ctx.author.id)}):
             return await ctx.send("앗! 벌써 가입하셨네요!")
         user = Eco(self.coll, str(ctx.author.id))
