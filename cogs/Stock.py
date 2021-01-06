@@ -13,6 +13,7 @@ class Stock(commands.Cog):
         self.bot = bot
         self.client = client
         self.coll = coll
+        self.StockLoop.start()
 
     def NextPrice(self, now):
         r = random.randint(1, 2)
@@ -25,14 +26,15 @@ class Stock(commands.Cog):
             result = now + ran
         return result
 
-    @commands.command()
-    async def Test(self, ctx):
-        string = list()
+    @tasks.loop(seconds=600)
+    async def StockLoop(self):
         for i in self.coll.find():
             Next = self.NextPrice(i["money"])
-            i["money"] = Next
-            string.append(i)
-        await ctx.send(string)
+            find = {"_id": i["_id"]}
+            data = self.coll.find_one(find)
+            data["money"] = Next
+            setdata = {"$set": data}
+            self.coll.update_one(find, setdata)
 
 
 def setup(bot):
