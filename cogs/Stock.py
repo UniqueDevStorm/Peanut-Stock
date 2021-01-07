@@ -57,7 +57,6 @@ class Stock(commands.Cog):
     def CheckCount(self, user: str, Corporation: int, count: int):
         money = self.CheckUserMoney(user)
         pay = Corporation * count
-        print(money)
         if money > pay:
             return True
         return False
@@ -93,11 +92,11 @@ class Stock(commands.Cog):
     @tasks.loop(seconds=600)
     async def StockLoop(self):
         for i in self.coll.find():
-            nowprice = i["money"]
-            _id = i["_id"]
-            self.OldPrice(_id, nowprice)
-            Next = self.NextPrice(nowprice)
-            find = {"_id": _id}
+            if i["_id"] == "time":
+                return
+            self.OldPrice(i["_id"], i["money"])
+            Next = self.NextPrice(i["money"])
+            find = {"_id": i["_id"]}
             data = self.coll.find_one(find)
             data["money"] = Next
             setdata = {"$set": data}
@@ -130,17 +129,6 @@ class Stock(commands.Cog):
         embed = discord.Embed(title="주식 통계", description=string)
         await ctx.send(embed=embed)
 
-    @commands.command()
-    async def Test(self, ctx, money: int = None):
-        if money == None:
-            money = 10000
-        find = {"_id": str(ctx.author.id)}
-        data = self.user.find_one(find)
-        data["money"] += money
-        setdata = {"$set": data}
-        self.coll.update_one(find, setdata)
-        await ctx.send("10000원 추가함")
-
     @Stock.command(name="구매")
     @CheckUser()
     async def Buy(self, ctx, Corporation: str, count: int):
@@ -150,7 +138,7 @@ class Stock(commands.Cog):
             if self.CheckCount(str(ctx.author.id), now, count):
                 self.CorporationBuy(
                     str(ctx.author.id),
-                    self.CheckCorporationCount(Corporation),
+                    self.NowCorporationPrice(Corporation),
                     Corporation,
                     count,
                 )
@@ -166,16 +154,31 @@ class Stock(commands.Cog):
         if self.CheckCorporation(Corporation) is Status.OK:
             if count == None:
                 count = self.user.find_one({"_id": str(ctx.author.id)})[Corporation]
+            if self.user.find_one({"_id": str(ctx.author.id)})[Corporation] < count:
+                return await ctx.send(
+                    f"{str(ctx.author)} 님이 가진 주식이 매도 하시려는것보다 적어 팔수 없어요!"
+                )
+            data = self.coll.find_one({"_id": Corporation})
+            nowprice = self.NowCorporationPrice(Corporation)
+            now = nowprice * count
+            self.CorporationSell(str(ctx.author.id), now, Corporation, count)
+            await ctx.send("정상적으로 처리 되었습니다! :white_check_mark:")
+
+    @Stock.command(name="가방")
+    @CheckUser()
+    async def Bag(self, ctx):
+        find = {"_id": str(ctx.author.id)}
+        data = self.user.find_one(find)
+        string = str()
+        for i in data:
+            if i == "_id" or i == "money":
+                pass
             else:
-                if self.user.find_one({"_id": str(ctx.author.id)})[Corporation] < count:
-                    return await ctx.send(
-                        f"{str(ctx.author)} 님이 가진 주식이 매도 하시려는것보다 적어 팔수 없어요!"
-                    )
-                data = self.coll.find_one({"_id": Corporation})
-                nowprice = self.NowCorporationPrice(Corporation)
-                now = nowprice * count
-                self.CorporationSell(str(ctx.author.id), now, Corporation, count)
-                await ctx.send("정상적으로 처리 되었습니다! :white_check_mark:")
+                string += f"{i} : {data[i]} 개\n"
+        embed = discord.Embed(
+            title=f"{str(ctx.author)} 님의 주식 가방", description=f"```\n{string}\n```"
+        )
+        await ctx.send(embed=embed)
 
 
 def setup(bot):
