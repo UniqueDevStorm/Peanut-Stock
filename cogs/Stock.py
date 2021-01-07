@@ -70,16 +70,34 @@ class Stock(commands.Cog):
         setdata = {"$set": data}
         self.user.update_one(find, setdata)
 
-    def CheckCorporationCount(self, Corporation: str):
+    def CorporationSell(self, user: str, plus: int, Corporation: str, count: int):
+        find = {"_id": user}
+        data = self.user.find_one(find)
+        data["money"] += plus
+        data[Corporation] -= count
+        setdata = {"$set": data}
+        self.user.update_one(find, setdata)
+
+    def NowCorporationPrice(self, Corporation: str):
         find = {"_id": Corporation}
         data = self.coll.find_one(find)
         return data["money"]
 
+    def OldPrice(self, Corporation: str, old: int):
+        find = {"_id": Corporation}
+        data = self.coll.find_one(find)
+        data["old"] = old
+        setdata = {"$set": data}
+        self.coll.update_one(find, setdata)
+
     @tasks.loop(seconds=600)
     async def StockLoop(self):
         for i in self.coll.find():
-            Next = self.NextPrice(i["money"])
-            find = {"_id": i["_id"]}
+            nowprice = i["money"]
+            _id = i["_id"]
+            self.OldPrice(_id, nowprice)
+            Next = self.NextPrice(nowprice)
+            find = {"_id": _id}
             data = self.coll.find_one(find)
             data["money"] = Next
             setdata = {"$set": data}
@@ -90,8 +108,17 @@ class Stock(commands.Cog):
         if ctx.invoked_subcommand is None:
             string = str()
             for i in self.coll.find():
-                string += f'{i["_id"]} : `{i["money"]}`\n'
-            embed = discord.Embed(title="주식 통계", description=string)
+                _id = i["_id"]
+                money = i["money"]
+                old = i["old"]
+                if old < money:
+                    now = int(money) - int(old)
+                    string += f'+ {i["_id"]} : {i["money"]} + {now} 원 증가\n'
+                if old > money:
+                    now = int(old) - int(money)
+                    string += f'- {i["_id"]} : {i["money"]} : {now} 원 감소\n'
+
+            embed = discord.Embed(title="주식 통계", description=f"```md\n{string}\n```")
             await ctx.send(embed=embed)
 
     @Stock.command(name="차트")
@@ -129,9 +156,26 @@ class Stock(commands.Cog):
                 )
                 await ctx.send("구매가 정상적으로 처리 되었습니다! :white_check_mark:")
             else:
-                await ctx.send("구매 못함 ;;")
+                await ctx.send("저런! 돈이 부족해요!")
         else:
             await ctx.send("정상적이지 않은 주식 회사 입니다.")
+
+    @Stock.command(name="팔기")
+    @CheckUser()
+    async def Sell(self, ctx, Corporation: str, count: int = None):
+        if self.CheckCorporation(Corporation) is Status.OK:
+            if count == None:
+                count = self.user.find_one({"_id": str(ctx.author.id)})[Corporation]
+            else:
+                if self.user.find_one({"_id": str(ctx.author.id)})[Corporation] < count:
+                    return await ctx.send(
+                        f"{str(ctx.author)} 님이 가진 주식이 매도 하시려는것보다 적어 팔수 없어요!"
+                    )
+                data = self.coll.find_one({"_id": Corporation})
+                nowprice = self.NowCorporationPrice(Corporation)
+                now = nowprice * count
+                self.CorporationSell(str(ctx.author.id), now, Corporation, count)
+                await ctx.send("정상적으로 처리 되었습니다! :white_check_mark:")
 
 
 def setup(bot):
