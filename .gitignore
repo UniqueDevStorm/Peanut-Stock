@@ -1,3 +1,5 @@
 .env
 default
 __pycache__
+DB.json
+.gitignore

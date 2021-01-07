@@ -113,7 +113,7 @@ class Stock(commands.Cog):
                 old = i["old"]
                 if old < money:
                     now = int(money) - int(old)
-                    string += f'+ {i["_id"]} : {i["money"]} + {now} 원 증가\n'
+                    string += f'+ {i["_id"]} : {i["money"]} : {now} 원 증가\n'
                 if old > money:
                     now = int(old) - int(money)
                     string += f'- {i["_id"]} : {i["money"]} : {now} 원 감소\n'
